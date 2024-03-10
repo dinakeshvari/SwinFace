@@ -20,7 +20,7 @@ def inference(cfg, weight, img):
     img.div_(255).sub_(0.5).div_(0.5)
 
     model = build_model(cfg)
-    dict_checkpoint = torch.load(weight)
+    dict_checkpoint = torch.load(weight, map_location=torch.device('cpu'))
     model.backbone.load_state_dict(dict_checkpoint["state_dict_backbone"])
     model.fam.load_state_dict(dict_checkpoint["state_dict_fam"])
     model.tss.load_state_dict(dict_checkpoint["state_dict_tss"])
@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     cfg = SwinFaceCfg()
     parser = argparse.ArgumentParser(description='PyTorch ArcFace Training')
-    parser.add_argument('--weight', type=str, default='<your path>/checkpoint_step_79999_gpu_0.pt')
-    parser.add_argument('--img', type=str, default="<your path>/test.jpg")
+    parser.add_argument('--weight', type=str, default='/content/checkpoint_step_79999_gpu_0.pt')
+    parser.add_argument('--img', type=str, default="/content/SwinFace/swinface_project/test.jpg")
     args = parser.parse_args()
     inference(cfg, args.weight, args.img)
