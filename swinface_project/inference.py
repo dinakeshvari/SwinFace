@@ -3,6 +3,8 @@ import argparse
 import cv2
 import numpy as np
 import torch
+from tqdm import tqdm
+import pickle
 
 from model import build_model
 
@@ -27,10 +29,10 @@ def inference(cfg, weight, img):
     model.om.load_state_dict(dict_checkpoint["state_dict_om"])
 
     model.eval()
-    output = model(img)#.numpy()
+    output = model(img)
+    embeddings = {k: v[0].numpy() for k, v in output.items()}
 
-    for each in output.keys():
-        print(each, "\t" , output[each][0].numpy())
+    return embeddings
 
 class SwinFaceCfg:
     network = "swin_t"
@@ -46,11 +48,48 @@ class SwinFaceCfg:
     fam = "3x3_2112_F_s_C_N_max"
     embedding_size = 512
 
-if __name__ == "__main__":
+import os
 
+if __name__ == "__main__":
     cfg = SwinFaceCfg()
     parser = argparse.ArgumentParser(description='PyTorch ArcFace Training')
     parser.add_argument('--weight', type=str, default='/content/checkpoint_step_79999_gpu_0.pt')
-    parser.add_argument('--img', type=str, default="/content/SwinFace/swinface_project/test.jpg")
+    parser.add_argument('--img_dir', type=str, default="/content/my_folder/")
     args = parser.parse_args()
-    inference(cfg, args.weight, args.img)
+
+    
+    with open('/content/first_images_train_match_paths.txt', 'r') as f:
+        img_paths = [line.rstrip() for line in f]
+
+    import numpy as np
+    print(np.shape(img_paths))
+
+    img_paths.sort()
+    # Loop over all images and perform inference
+    embeddings_dict = {}
+    for idx, img_path in enumerate(tqdm(img_paths, desc="Processing images")):
+        embeddings = inference(cfg, args.weight, img_path)
+        embeddings_dict[idx] = embeddings
+        
+    np.save('train_mach_1.npy', embeddings_dict)
+    # Save embeddings_dict to a pickle file
+    with open('train_mach_1.pickle', 'wb') as handle:
+        pickle.dump(embeddings_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+      
+
+
+
+    # with open('/content/second_images_train_match_paths.txt', 'r') as f:
+    #     img_paths2 = [line.rstrip() for line in f]
+
+    # img_paths2.sort()
+
+    # # Loop over all images and perform inference
+    # embeddings_dict = {}
+    # for img_path in tqdm(img_paths2, desc="Processing images"):
+    #     embeddings = inference(cfg, args.weight, img_path)
+    #     embeddings_dict[img_path] = embeddings
+    # np.save('train_mach_2.npy', embeddings_dict)
+    # # Save embeddings_dict to a pickle file
+    # with open('train_mach_2.pickle', 'wb') as handle:
+    #     pickle.dump(embeddings_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
