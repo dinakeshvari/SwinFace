@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import pickle
+import os
 
 from model import build_model
 
@@ -52,24 +53,53 @@ import os
 
 
 if __name__ == "__main__":
+    # cfg = SwinFaceCfg()
+    # parser = argparse.ArgumentParser(description='PyTorch ArcFace Training')
+    # parser.add_argument('--weight', type=str, default='/content/checkpoint_step_79999_gpu_0.pt')
+    # parser.add_argument("--img_dir", type=str, default="/content/CFD_03/AF-200/CFD-AF-200-228-N.jpg", help="/content/CFD_03/AF-200/CFD-AF-200-228-N.jpg")  
+    # args, _ = parser.parse_known_args()  # Changed to parse_known_args()
+
+    # # Get list of all image paths in the directory
+    # img_paths = [os.path.join(args.img_dir, img) for img in os.listdir(args.img_dir) if img.endswith(('.png', '.jpg', '.jpeg'))]
+
+    # # Sort the list of image paths
+    # img_paths.sort()
+
+    # # Loop over all images and perform inference
+    # embeddings_dict = {}
+    # for img_path in tqdm(img_paths, desc="Processing images"):
+    #     embeddings = inference(cfg, args.weight, img_path)
+    #     embeddings_dict[img_path] = embeddings
+    # np.save('embeddings_dict.npy', embeddings_dict)
+    # # Save embeddings_dict to a pickle file
+    # with open('embeddings_dict.pickle', 'wb') as handle:
+    #     pickle.dump(embeddings_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    # inference(cfg, args.weight, args.img)
+
+    ## defining identities
+
+    dataset_path = '/content/CFD_03'
+    identities = [os.path.join(dataset_path, folder) for folder in os.listdir(dataset_path)]
+
+
     cfg = SwinFaceCfg()
     parser = argparse.ArgumentParser(description='PyTorch ArcFace Training')
     parser.add_argument('--weight', type=str, default='/content/checkpoint_step_79999_gpu_0.pt')
-    parser.add_argument("--img_dir", type=str, default="/content/SwinFace/swinface_project", help="/content/SwinFace/swinface_project/test.jpg")  # Changed from --img
-    args, _ = parser.parse_known_args()  # Changed to parse_known_args()
+    parser.add_argument('--img', type=str, default="/content/CFD_03/AF-200/CFD-AF-200-228-N.jpg")
+    args = parser.parse_args()
+    # print(inference(cfg, args.weight, args.img))
+    # emb1=(inference(cfg, args.weight, args.img))
 
-    # Get list of all image paths in the directory
-    img_paths = [os.path.join(args.img_dir, img) for img in os.listdir(args.img_dir) if img.endswith(('.png', '.jpg', '.jpeg'))]
+    embeddings = {}
+    for identity in tqdm(identities, desc="Precomputing embeddings"):
+        images = os.listdir(identity)
+        for img in images:
+            img_path = os.path.join(identity, img)
+            if img_path not in embeddings:  # Avoid redundant computations
+                try:
+                    embeddings[img_path] = inference(cfg, args.weight, img_path)
+                except Exception as e:
+                    print(f"Error processing image {img_path}: {e}")
 
-    # Sort the list of image paths
-    img_paths.sort()
-
-    # Loop over all images and perform inference
-    embeddings_dict = {}
-    for img_path in tqdm(img_paths, desc="Processing images"):
-        embeddings = inference(cfg, args.weight, img_path)
-        embeddings_dict[img_path] = embeddings
-    np.save('embeddings_dict.npy', embeddings_dict)
-    # Save embeddings_dict to a pickle file
     with open('embeddings_dict.pickle', 'wb') as handle:
-        pickle.dump(embeddings_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+      pickle.dump(embeddings, handle, protocol=pickle.HIGHEST_PROTOCOL)
